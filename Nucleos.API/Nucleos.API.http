@@ -1,0 +1,6 @@
+@Nucleos.API_HostAddress = http://localhost:5034
+
+GET {{Nucleos.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
