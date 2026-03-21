@@ -1,0 +1,87 @@
+# .NET build outputs
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.pidb
+*.psess
+*.sln.docstates
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio
+.vs/
+.vscode/
+
+# Rider
+.idea/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Logs
+logs/
+*.log
+*.pid
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# User secrets
+secrets.json
+appsettings.Development.json
+appsettings.Production.json
+
+# IDE
+*.sln.ide
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.tmp
+
+# Code coverage
+*.coverage
+*.coveragexml
+*.dotCover
+*.dotCover.zip
+
+# Publish
+*.Publish.xml
+publish/
