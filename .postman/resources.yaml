@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: ac90aa1d-1295-4645-8cd6-15d024cbb7b8
+
+localResources:
+  specs:
+    - ../back-end/src/1. Presentation/Nucleos.Grpc/Protos/nucleos.proto

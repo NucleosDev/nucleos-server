@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  nucleos-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - SUPABASE_HOST=${SUPABASE_HOST}
+      - SUPABASE_PORT=${SUPABASE_PORT}
+      - SUPABASE_DATABASE=${SUPABASE_DATABASE}
+      - SUPABASE_USERNAME=${SUPABASE_USERNAME}
+      - SUPABASE_PASSWORD=${SUPABASE_PASSWORD}
+      - JWT_KEY=${JWT_KEY}
+      - JWT_ISSUER=${JWT_ISSUER}
+      - JWT_AUDIENCE=${JWT_AUDIENCE}
+      - JWT_EXPIRES_MINUTES=${JWT_EXPIRES_MINUTES}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    restart: unless-stopped
+
+  # Para uso local com PostgreSQL (alternativa ao Supabase)
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: nucleos
+      POSTGRES_USER: nucleos
+      POSTGRES_PASSWORD: nucleos123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    profiles:
+      - local
+
+volumes:
+  postgres_data:

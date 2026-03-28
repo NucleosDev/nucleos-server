@@ -1,0 +1,8 @@
+using Nucleos.Application.Features.Blocos.DTOs;
+
+namespace Nucleos.Application.Features.Nucleos.DTOs;
+
+public class NucleoDetailDto : NucleoDto
+{
+    public List<BlocoDto> Blocos { get; set; }
+}

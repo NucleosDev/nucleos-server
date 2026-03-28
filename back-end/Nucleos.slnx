@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/1. Presentation/">
+    <Project Path="src/1. Presentation/Nucleos.API/Nucleos.API.csproj" />
+  </Folder>
+  <Folder Name="/src/2. Application/">
+    <Project Path="src/2. Application/Nucleos.Application/Nucleos.Application.csproj" />
+  </Folder>
+  <Folder Name="/src/3. Domain/">
+    <Project Path="src/3. Domain/Nucleos.Domain/Nucleos.Domain.csproj" />
+  </Folder>
+  <Folder Name="/src/4. Infrastructure/">
+    <Project Path="src/4. Infrastructure/Nucleos.Infrastructure/Nucleos.Infrastructure.csproj" />
+  </Folder>
+</Solution>
