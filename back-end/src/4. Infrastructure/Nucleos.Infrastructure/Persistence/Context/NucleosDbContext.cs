@@ -259,6 +259,10 @@ public class NucleosDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
             entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
             entity.HasOne(e => e.Nucleo).WithMany(n => n.Blocos).HasForeignKey(e => e.NucleoId);
+            entity.Ignore(b => b.CreatedBy); // lembrar remover depois de corrigir a entdidade
+            entity.Ignore(b => b.DeletedBy);// lembrar remover depois de corrigir a entdidade
+            entity.Ignore(b => b.IsDeleted);// lembrar remover depois de corrigir a entdidade
+            entity.Ignore(b => b.UpdatedBy);// lembrar remover depois de corrigir a entdidade
         });
 
         modelBuilder.Entity<BlocoCalculo>(entity =>

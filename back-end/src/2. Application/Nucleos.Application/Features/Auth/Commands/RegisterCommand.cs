@@ -13,9 +13,9 @@ public class RegisterCommand : IRequest<AuthResponseDto>
     public string Email { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
-    public string ConfirmPassword { get; set; } = string.Empty; // ← ADICIONADO
+    public string ConfirmPassword { get; set; } = string.Empty;
     public string? Phone { get; set; }
-    public string Cpf { get; set; } = string.Empty; // ← OBRIGATÓRIO
+    public string Cpf { get; set; } = string.Empty;
     public string? Nickname { get; set; }
 }
 
@@ -39,35 +39,8 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
     {
         try
         {
-            // Validação de senhas
-            if (request.Password != request.ConfirmPassword)
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "As senhas não conferem",
-                    Errors = new List<string> { "As senhas não conferem" }
-                };
-
-            // Validação de CPF
-            if (string.IsNullOrWhiteSpace(request.Cpf))
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "CPF é obrigatório",
-                    Errors = new List<string> { "CPF é obrigatório" }
-                };
-
-            // Limpar CPF
-            var cleanCpf = request.Cpf.Replace(".", "").Replace("-", "").Replace("/", "");
-
-            // Validar formato do CPF
-            if (!IsValidCpf(cleanCpf))
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Message = "CPF inválido",
-                    Errors = new List<string> { "CPF inválido" }
-                };
+            // Normaliza o CPF (remove caracteres não numéricos)
+            var cleanCpf = new string(request.Cpf.Where(char.IsDigit).ToArray());
 
             // Verificar se email já existe
             var emailExists = await _context.Users.AnyAsync(u => u.Email == request.Email, cancellationToken);
@@ -89,6 +62,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
                     Errors = new List<string> { "CPF já cadastrado" }
                 };
 
+            // Criação do usuário
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
             var user = new User
@@ -96,7 +70,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
                 Id = Guid.NewGuid(),
                 Email = request.Email,
                 Phone = request.Phone,
-                Cpf = cleanCpf, // ← OBRIGATÓRIO
+                Cpf = cleanCpf,
                 PasswordHash = passwordHash,
                 Active = true,
                 EmailVerified = false,
@@ -104,6 +78,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
                 UpdatedAt = DateTime.UtcNow
             };
 
+            // Define nickname (se não informado, usa primeiro nome)
             var nickname = string.IsNullOrEmpty(request.Nickname)
                 ? request.FullName.Split(' ')[0]
                 : request.Nickname;
@@ -188,40 +163,5 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
                 Errors = new List<string> { ex.Message }
             };
         }
-    }
-
-    // Método para validar CPF
-    private bool IsValidCpf(string cpf)
-    {
-        if (string.IsNullOrWhiteSpace(cpf))
-            return false;
-
-        if (cpf.Length != 11)
-            return false;
-
-        // Verificar se todos os dígitos são iguais
-        if (cpf.Distinct().Count() == 1)
-            return false;
-
-        // Calcular primeiro dígito verificador
-        int sum = 0;
-        for (int i = 0; i < 9; i++)
-            sum += int.Parse(cpf[i].ToString()) * (10 - i);
-
-        int firstDigit = 11 - (sum % 11);
-        if (firstDigit >= 10) firstDigit = 0;
-
-        if (firstDigit != int.Parse(cpf[9].ToString()))
-            return false;
-
-        // Calcular segundo dígito verificador
-        sum = 0;
-        for (int i = 0; i < 10; i++)
-            sum += int.Parse(cpf[i].ToString()) * (11 - i);
-
-        int secondDigit = 11 - (sum % 11);
-        if (secondDigit >= 10) secondDigit = 0;
-
-        return secondDigit == int.Parse(cpf[10].ToString());
     }
 }

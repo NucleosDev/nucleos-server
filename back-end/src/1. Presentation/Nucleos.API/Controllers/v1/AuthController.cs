@@ -18,7 +18,7 @@ public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ILogger<AuthController> _logger;
-    private readonly NucleosDbContext _context; // ← Adicionar o DbContext
+    private readonly NucleosDbContext _context;
 
     public AuthController(IMediator mediator, ILogger<AuthController> logger, NucleosDbContext context)
     {
@@ -28,8 +28,6 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
-    
-    
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
     {
         if (!ModelState.IsValid)
@@ -59,6 +57,8 @@ public class AuthController : ControllerBase
         
         if (!result.Success)
             return BadRequest(result);
+
+        SetAuthCookie(result.Token, result.ExpiresAt);
             
         return Ok(result);
     }
@@ -90,8 +90,17 @@ public class AuthController : ControllerBase
         
         if (!result.Success)
             return Unauthorized(result);
+
+        SetAuthCookie(result.Token, result.ExpiresAt);
             
         return Ok(result);
+    }
+
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        Response.Cookies.Delete("auth_token");
+        return Ok(new { message = "Logout realizado com sucesso" });
     }
 
     [HttpPost("refresh-token")]
@@ -147,7 +156,22 @@ public class AuthController : ControllerBase
             nickname = user.Profile?.Nickname,
             avatarUrl = user.Profile?.AvatarUrl,
             emailVerified = user.EmailVerified,
-            active = user.Active
+            active = user.Active,
+            createdAt = user.CreatedAt
         });
     }
+
+private void SetAuthCookie(string token, DateTime expiresAt)
+{
+    Response.Cookies.Append("auth_token", token, new CookieOptions
+    {
+        HttpOnly = true,
+        Secure = true, // dev (localhost)
+        SameSite = SameSiteMode.None, //  CORRETO PRA LOCALHOST
+        Expires = expiresAt,
+        Path = "/",
+		IsEssential = true
+
+    });
+}
 }

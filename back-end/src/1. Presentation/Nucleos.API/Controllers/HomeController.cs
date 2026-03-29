@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Nucleos.API.Controllers;
 
 [ApiController]
-[Route("")]
+[Route("home")]
+[ApiExplorerSettings(IgnoreApi = true)]
 public class HomeController : ControllerBase
 {
     [HttpGet]
