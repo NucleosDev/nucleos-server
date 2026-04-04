@@ -11,6 +11,7 @@ namespace Nucleos.API.Controllers.v1;
 [ApiController]
 [Route("api/v1/[controller]")]
 [Authorize]
+
 public class NucleosController : ControllerBase
 {
     private readonly IMediator _mediator;
