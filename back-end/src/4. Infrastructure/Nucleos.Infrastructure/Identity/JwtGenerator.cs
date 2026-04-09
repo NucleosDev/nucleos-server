@@ -1,8 +1,8 @@
-// src/4. Infrastructure/Nucleos.Infrastructure/Identity/JwtGenerator.cs
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Nucleos.Application.Common.Interfaces;
 
@@ -11,66 +11,70 @@ namespace Nucleos.Infrastructure.Identity;
 public class JwtGenerator : IJwtGenerator
 {
     private readonly IConfiguration _configuration;
+    private readonly ILogger<JwtGenerator> _logger;
 
-    public JwtGenerator(IConfiguration configuration)
+    public JwtGenerator(
+        IConfiguration configuration,
+        ILogger<JwtGenerator> logger)
     {
         _configuration = configuration;
+        _logger = logger;
     }
 
     public string GenerateToken(Guid userId, string email, string role)
     {
         try
         {
-            // CORREÇÃO: Tentar obter do ambiente primeiro
-            var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") ?? 
-                        _configuration["Jwt:Key"] ??
-                        "Nucleos-Super-Secret-Key-Min-32-Characters-Long-For-JWT!";
-            
-            var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? 
-                           _configuration["Jwt:Issuer"] ??
-                           "https://localhost:5000";
-            
-            var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? 
-                             _configuration["Jwt:Audience"] ??
-                             "https://localhost:5000";
-            
-            var expiresInMinutesStr = Environment.GetEnvironmentVariable("JWT_EXPIRES_MINUTES") ?? 
-                                      _configuration["Jwt:ExpiresInMinutes"] ??
-                                      "60";
-            
-            if (!int.TryParse(expiresInMinutesStr, out var expiresInMinutes))
-            {
-                expiresInMinutes = 60;
-                Console.WriteLine($"⚠️ JWT_EXPIRES_MINUTES inválido: '{expiresInMinutesStr}', usando {expiresInMinutes} minutos");
-            }
+            var jwtKey = _configuration["JWT_KEY"];
+var jwtIssuer = _configuration["JWT_ISSUER"] ?? "https://localhost:5000";
+var jwtAudience = _configuration["JWT_AUDIENCE"] ?? "https://localhost:5000";
+var expiresInMinutesStr = _configuration["JWT_EXPIRES_MINUTES"];
 
-            Console.WriteLine($"🔑 Gerando token com chave de tamanho: {jwtKey.Length} caracteres");
-            
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(jwtKey); // Usar UTF8 em vez de ASCII
-            
+            if (string.IsNullOrWhiteSpace(jwtKey))
+                throw new Exception("JWT_KEY não configurada");
+
+            if (jwtKey.Length < 32)
+                throw new Exception("JWT_KEY deve ter no mínimo 32 caracteres");
+
+            if (!int.TryParse(expiresInMinutesStr, out var expiresInMinutes))
+                expiresInMinutes = 60;
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var now = DateTime.UtcNow;
+
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim(ClaimTypes.Email, email),
+                new Claim(ClaimTypes.Role, role),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                    new Claim(ClaimTypes.Email, email),
-                    new Claim(ClaimTypes.Role, role)
-                }),
-                Expires = DateTime.UtcNow.AddMinutes(expiresInMinutes),
+                Subject = new ClaimsIdentity(claims),
+                Expires = now.AddMinutes(expiresInMinutes),
+                NotBefore = now,
+                IssuedAt = now,
                 Issuer = jwtIssuer,
                 Audience = jwtAudience,
                 SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha256Signature)
+                    key,
+                    SecurityAlgorithms.HmacSha256)
             };
 
+            var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateToken(tokenDescriptor);
+
+            _logger.LogInformation("JWT gerado para usuário {UserId}", userId);
+			_logger.LogInformation("JWT_KEY (Generator): {Key}", jwtKey);
+
             return tokenHandler.WriteToken(token);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Erro ao gerar token JWT: {ex.Message}");
+            _logger.LogError(ex, "Erro ao gerar token JWT");
             throw;
         }
     }

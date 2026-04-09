@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 namespace Nucleos.API.Filters;
+
 public class ApiKeyAuthFilter : IAuthorizationFilter
 {
     private const string ApiKeyHeader = "X-Api-Key";

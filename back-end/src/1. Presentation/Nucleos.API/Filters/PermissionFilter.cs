@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.Filters;
 namespace Nucleos.API.Filters;
+
 public class PermissionFilter : IAuthorizationFilter
 {
     private readonly string _permission;

@@ -1,4 +1,5 @@
 namespace Nucleos.API.Extensions;
+
 public static class ServiceExtensions
 {
     public static IApplicationBuilder UseNucleosMiddlewares(this IApplicationBuilder app)

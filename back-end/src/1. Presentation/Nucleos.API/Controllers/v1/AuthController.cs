@@ -6,9 +6,6 @@ using Microsoft.EntityFrameworkCore;
 using Nucleos.Application.Features.Auth.Commands;
 using Nucleos.Application.Features.Auth.DTOs;
 using Nucleos.Infrastructure.Persistence.Context;
-using Nucleos.Application.Common.Interfaces;   
-using AutoMapper;                             
-using Nucleos.Application.Common.Exceptions;  
 
 namespace Nucleos.API.Controllers.v1;
 
@@ -20,13 +17,20 @@ public class AuthController : ControllerBase
     private readonly ILogger<AuthController> _logger;
     private readonly NucleosDbContext _context;
 
-    public AuthController(IMediator mediator, ILogger<AuthController> logger, NucleosDbContext context)
+    public AuthController(
+        IMediator mediator,
+        ILogger<AuthController> logger,
+        NucleosDbContext context)
     {
         _mediator = mediator;
         _logger = logger;
         _context = context;
     }
 
+    // =========================
+    // REGISTER
+    // =========================
+    [AllowAnonymous]
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
     {
@@ -43,26 +47,26 @@ public class AuthController : ControllerBase
             });
         }
 
-        var command = new RegisterCommand
+        var result = await _mediator.Send(new RegisterCommand
         {
             Email = request.Email,
             FullName = request.FullName,
             Password = request.Password,
-            ConfirmPassword = request.ConfirmPassword, 
+            ConfirmPassword = request.ConfirmPassword,
             Phone = request.Phone,
             Cpf = request.Cpf
-        };
-        
-        var result = await _mediator.Send(command);
-        
+        });
+
         if (!result.Success)
             return BadRequest(result);
 
-        SetAuthCookie(result.Token, result.ExpiresAt);
-            
         return Ok(result);
     }
-    
+
+    // =========================
+    // LOGIN
+    // =========================
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
     {
@@ -71,80 +75,66 @@ public class AuthController : ControllerBase
             return BadRequest(new AuthResponseDto
             {
                 Success = false,
-                Message = "Dados inválidos",
-                Errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .ToList()
+                Message = "Dados inválidos"
             });
         }
 
-        var command = new LoginCommand
+        var result = await _mediator.Send(new LoginCommand
         {
             Email = request.Email,
             Password = request.Password,
             RememberMe = request.RememberMe
-        };
-        
-        var result = await _mediator.Send(command);
-        
+        });
+
         if (!result.Success)
             return Unauthorized(result);
 
-        SetAuthCookie(result.Token, result.ExpiresAt);
-            
         return Ok(result);
     }
 
+    // =========================
+    // LOGOUT
+    // =========================
     [HttpPost("logout")]
     public IActionResult Logout()
     {
-        Response.Cookies.Delete("auth_token");
         return Ok(new { message = "Logout realizado com sucesso" });
     }
 
-    [HttpPost("refresh-token")]
-    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto request)
-    {
-        if (string.IsNullOrWhiteSpace(request.RefreshToken))
-        {
-            return BadRequest(new AuthResponseDto
-            {
-                Success = false,
-                Message = "Refresh token é obrigatório"
-            });
-        }
-
-        var command = new RefreshTokenCommand
-        {
-            RefreshToken = request.RefreshToken
-        };
-        
-        var result = await _mediator.Send(command);
-        
-        if (!result.Success)
-            return Unauthorized(result);
-            
-        return Ok(result);
-    }
-    
-    [HttpGet("me")]
+    // =========================
+    // 👤 ME (CORRETO)
+    // =========================
     [Authorize]
+    [HttpGet("me")]
     public async Task<IActionResult> GetCurrentUser()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim))
-            return Unauthorized();
+        var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+        _logger.LogInformation("Authorization Header: {AuthHeader}", authHeader);
 
-        if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized();
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim))
+        {
+            _logger.LogWarning("❌ Claim NameIdentifier não encontrada");
+            return Unauthorized(new { message = "Token inválido (sem claim)" });
+        }
+
+        if (!Guid.TryParse(userIdClaim, out Guid userId))
+        {
+            _logger.LogWarning("❌ Claim inválida: {UserIdClaim}", userIdClaim);
+            return Unauthorized(new { message = "Token inválido (formato inválido)" });
+        }
 
         var user = await _context.Users
             .Include(u => u.Profile)
+            .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         if (user == null)
-            return NotFound();
+        {
+            _logger.LogWarning("❌ Usuário não encontrado: {UserId}", userId);
+            return NotFound(new { message = "Usuário não encontrado" });
+        }
 
         return Ok(new
         {
@@ -160,18 +150,4 @@ public class AuthController : ControllerBase
             createdAt = user.CreatedAt
         });
     }
-
-private void SetAuthCookie(string token, DateTime expiresAt)
-{
-    Response.Cookies.Append("auth_token", token, new CookieOptions
-    {
-        HttpOnly = true,
-        Secure = true, // dev (localhost)
-        SameSite = SameSiteMode.None, //  CORRETO PRA LOCALHOST
-        Expires = expiresAt,
-        Path = "/",
-		IsEssential = true
-
-    });
-}
 }

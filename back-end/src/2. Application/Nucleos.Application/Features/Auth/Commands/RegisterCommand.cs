@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Nucleos.Application.Common.Interfaces;
 using Nucleos.Application.Features.Auth.DTOs;
 using Nucleos.Domain.Entities;
-using BCrypt.Net;
 
 namespace Nucleos.Application.Features.Auth.Commands;
 
@@ -39,36 +38,83 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
     {
         try
         {
-            // Normaliza o CPF (remove caracteres não numéricos)
+            // Validações básicas
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Password) ||
+                string.IsNullOrWhiteSpace(request.FullName) ||
+                string.IsNullOrWhiteSpace(request.Cpf))
+            {
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "Dados obrigatórios não informados"
+                };
+            }
+
+            if (request.Password != request.ConfirmPassword)
+            {
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "As senhas não coincidem"
+                };
+            }
+
+            if (request.Password.Length < 6)
+            {
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "A senha deve ter pelo menos 6 caracteres"
+                };
+            }
+
+            // Normalizações
+            var email = request.Email.Trim().ToLower();
             var cleanCpf = new string(request.Cpf.Where(char.IsDigit).ToArray());
 
-            // Verificar se email já existe
-            var emailExists = await _context.Users.AnyAsync(u => u.Email == request.Email, cancellationToken);
+            if (cleanCpf.Length != 11)
+            {
+                return new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "CPF inválido"
+                };
+            }
+
+            // Verificações de duplicidade
+            var emailExists = await _context.Users
+                .AnyAsync(u => u.Email == email, cancellationToken);
+
             if (emailExists)
+            {
                 return new AuthResponseDto
                 {
                     Success = false,
-                    Message = "E-mail já cadastrado",
-                    Errors = new List<string> { "E-mail já cadastrado" }
+                    Message = "E-mail já cadastrado"
                 };
+            }
 
-            // Verificar se CPF já existe
-            var cpfExists = await _context.Users.AnyAsync(u => u.Cpf == cleanCpf, cancellationToken);
+            var cpfExists = await _context.Users
+                .AnyAsync(u => u.Cpf == cleanCpf, cancellationToken);
+
             if (cpfExists)
+            {
                 return new AuthResponseDto
                 {
                     Success = false,
-                    Message = "CPF já cadastrado",
-                    Errors = new List<string> { "CPF já cadastrado" }
+                    Message = "CPF já cadastrado"
                 };
+            }
 
-            // Criação do usuário
+            // Hash da senha
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
+            // Criação do usuário
             var user = new User
             {
                 Id = Guid.NewGuid(),
-                Email = request.Email,
+                Email = email,
                 Phone = request.Phone,
                 Cpf = cleanCpf,
                 PasswordHash = passwordHash,
@@ -78,16 +124,16 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
                 UpdatedAt = DateTime.UtcNow
             };
 
-            // Define nickname (se não informado, usa primeiro nome)
-            var nickname = string.IsNullOrEmpty(request.Nickname)
-                ? request.FullName.Split(' ')[0]
-                : request.Nickname;
+            // Nickname seguro
+            var nickname = string.IsNullOrWhiteSpace(request.Nickname)
+                ? request.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0]
+                : request.Nickname.Trim();
 
             var userProfile = new UserProfile
             {
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
-                FullName = request.FullName,
+                FullName = request.FullName.Trim(),
                 Nickname = nickname,
                 AvatarUrl = $"https://ui-avatars.com/api/?background=random&color=fff&name={Uri.EscapeDataString(request.FullName)}",
                 CreatedAt = DateTime.UtcNow
@@ -130,6 +176,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
                 UpdatedAt = DateTime.UtcNow
             };
 
+            // Persistência
             await _context.Users.AddAsync(user, cancellationToken);
             await _context.UserProfiles.AddAsync(userProfile, cancellationToken);
             await _context.UserSecurity.AddAsync(userSecurity, cancellationToken);
@@ -139,6 +186,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
 
             await _context.SaveChangesAsync(cancellationToken);
 
+            // Token
             var token = _jwtGenerator.GenerateToken(user.Id, user.Email, "user");
             var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
@@ -156,6 +204,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro ao registrar usuário");
+
             return new AuthResponseDto
             {
                 Success = false,

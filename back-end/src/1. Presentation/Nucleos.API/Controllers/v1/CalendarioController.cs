@@ -23,11 +23,11 @@ public class CalendarioController : ControllerBase
     [HttpGet("nucleo/{nucleoId}")]
     public async Task<IActionResult> GetByNucleo(Guid nucleoId, [FromQuery] DateTime? start, [FromQuery] DateTime? end)
     {
-        var query = new GetEventosByNucleoQuery 
-        { 
-            NucleoId = nucleoId, 
-            Start = start, 
-            End = end 
+        var query = new GetEventosByNucleoQuery
+        {
+            NucleoId = nucleoId,
+            Start = start,
+            End = end
         };
         var result = await _mediator.Send(query);
         return Ok(result);

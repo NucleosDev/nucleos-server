@@ -8,17 +8,12 @@ namespace Nucleos.API.Controllers;
 /// Deve funcionar independentemente da versão da API
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]  // Note: SEM "v1" na rota!
+[Route("v1/health")]
 public class HealthController : ControllerBase
 {
     [HttpGet]
     public IActionResult Get()
     {
-        return Ok(new 
-        { 
-            status = "healthy", 
-            timestamp = DateTime.UtcNow,
-            message = "API is running"
-        });
+        return Ok("API OK");
     }
 }

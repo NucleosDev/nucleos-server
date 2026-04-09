@@ -1,4 +1,5 @@
 namespace Nucleos.API.Middleware;
+
 public class TenantMiddleware
 {
     private readonly RequestDelegate _next;

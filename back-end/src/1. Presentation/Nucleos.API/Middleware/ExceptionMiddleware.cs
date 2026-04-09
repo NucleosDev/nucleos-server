@@ -34,7 +34,7 @@ public class ExceptionMiddleware
         context.Response.StatusCode = (int)status;
         var body = JsonSerializer.Serialize(new { status = (int)status, message, errors = ex is Application.Common.Exceptions.ValidationException ve2 ? (object)ve2.Errors : null });
         await context.Response.WriteAsync(body);
-        
+
         _logger.LogError(ex, "Erro não tratado: {Message} | Tipo: {Type}", ex.Message, ex.GetType().FullName);
     }
 }

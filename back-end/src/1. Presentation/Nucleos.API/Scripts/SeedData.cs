@@ -136,17 +136,17 @@ public class SeedData
             if (!await context.Subscriptions.AnyAsync())
             {
                 logger.LogInformation("📝 Criando assinaturas...");
-                
+
                 // Buscar os planos do banco
                 var plans = await context.Plans.ToListAsync();
                 var freePlan = plans.FirstOrDefault(p => p.Name == "Free");
-                
+
                 if (freePlan == null)
                 {
                     logger.LogError("❌ Plano Free não encontrado!");
                     throw new Exception("Plano Free não encontrado no banco de dados");
                 }
-                
+
                 var subscriptions = new List<Subscription>
                 {
                     new Subscription { Id = Guid.NewGuid(), UserId = Guid.Parse("11111111-1111-1111-1111-111111111111"), PlanId = freePlan.Id, StartedAt = DateTime.UtcNow, ExpiresAt = DateTime.UtcNow.AddYears(1) },
@@ -228,27 +228,27 @@ public class SeedData
 
                 foreach (var nucleo in nucleos)
                 {
-                    timers.Add(new NucleoTimer 
-                    { 
-                        Id = Guid.NewGuid(), 
-                        NucleoId = nucleo.Id, 
-                        Titulo = "Estudo Pomodoro", 
-                        Inicio = DateTime.UtcNow.AddHours(-1), 
-                        Fim = DateTime.UtcNow, 
-                        DuracaoSegundos = 3600, 
-                        CreatedAt = DateTime.UtcNow, 
-                        UpdatedAt = DateTime.UtcNow 
+                    timers.Add(new NucleoTimer
+                    {
+                        Id = Guid.NewGuid(),
+                        NucleoId = nucleo.Id,
+                        Titulo = "Estudo Pomodoro",
+                        Inicio = DateTime.UtcNow.AddHours(-1),
+                        Fim = DateTime.UtcNow,
+                        DuracaoSegundos = 3600,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     });
-                    timers.Add(new NucleoTimer 
-                    { 
-                        Id = Guid.NewGuid(), 
-                        NucleoId = nucleo.Id, 
-                        Titulo = "Exercícios", 
-                        Inicio = DateTime.UtcNow.AddHours(-2), 
-                        Fim = DateTime.UtcNow.AddHours(-1), 
-                        DuracaoSegundos = 1800, 
-                        CreatedAt = DateTime.UtcNow, 
-                        UpdatedAt = DateTime.UtcNow 
+                    timers.Add(new NucleoTimer
+                    {
+                        Id = Guid.NewGuid(),
+                        NucleoId = nucleo.Id,
+                        Titulo = "Exercícios",
+                        Inicio = DateTime.UtcNow.AddHours(-2),
+                        Fim = DateTime.UtcNow.AddHours(-1),
+                        DuracaoSegundos = 1800,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     });
                 }
                 await context.NucleoTimers.AddRangeAsync(timers);
@@ -257,7 +257,7 @@ public class SeedData
             }
 
             await context.SaveChangesAsync();
-            
+
             // Resumo final
             logger.LogInformation("🎉 Seed completo finalizado com sucesso!");
             logger.LogInformation($"📊 Resumo: {await context.Users.CountAsync()} usuários, {await context.Nucleos.CountAsync()} núcleos");
