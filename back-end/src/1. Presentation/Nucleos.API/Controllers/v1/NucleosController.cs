@@ -10,7 +10,6 @@ namespace Nucleos.API.Controllers.v1;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize]
 
 public class NucleosController : ControllerBase
 {
@@ -35,12 +34,19 @@ public class NucleosController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateNucleoCommand command)
+   [HttpPost]
+public async Task<IActionResult> Create([FromBody] CreateNucleoCommand command)
+{
+    Console.WriteLine("AUTHENTICATED: " + User.Identity?.IsAuthenticated);
+
+    foreach (var claim in User.Claims)
     {
-        var result = await _mediator.Send(command);
-        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+        Console.WriteLine($"CLAIM: {claim.Type} = {claim.Value}");
     }
+
+    var result = await _mediator.Send(command);
+    return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+}
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateNucleoCommand command)
@@ -67,5 +73,7 @@ public class NucleosController : ControllerBase
 
         await _mediator.Send(command);
         return NoContent();
+
+
     }
 }

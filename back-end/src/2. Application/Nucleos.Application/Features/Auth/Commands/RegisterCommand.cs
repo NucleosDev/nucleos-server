@@ -110,19 +110,14 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             // Hash da senha
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-            // Criação do usuário
-            var user = new User
-            {
-                Id = Guid.NewGuid(),
-                Email = email,
-                Phone = request.Phone,
-                Cpf = cleanCpf,
-                PasswordHash = passwordHash,
-                Active = true,
-                EmailVerified = false,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+            // Criação do usuário - CORRIGIDO (usando o construtor)
+            var user = new User(
+                email: email,
+                phone: request.Phone ?? string.Empty,
+                cpf: cleanCpf,
+                passwordHash: passwordHash
+            );
+            var userId = user.Id;
 
             // Nickname seguro
             var nickname = string.IsNullOrWhiteSpace(request.Nickname)
@@ -132,7 +127,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             var userProfile = new UserProfile
             {
                 Id = Guid.NewGuid(),
-                UserId = user.Id,
+                UserId = userId,
                 FullName = request.FullName.Trim(),
                 Nickname = nickname,
                 AvatarUrl = $"https://ui-avatars.com/api/?background=random&color=fff&name={Uri.EscapeDataString(request.FullName)}",
@@ -142,7 +137,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             var userSecurity = new UserSecurity
             {
                 Id = Guid.NewGuid(),
-                UserId = user.Id,
+                UserId = userId,
                 FailedAttempts = 0,
                 PasswordUpdatedAt = DateTime.UtcNow
             };
@@ -150,13 +145,13 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             var userRole = new UserRole
             {
                 Id = Guid.NewGuid(),
-                UserId = user.Id,
+                UserId = userId,
                 Role = "user"
             };
 
             var userPreference = new UserPreference
             {
-                UserId = user.Id,
+                UserId = userId,
                 Theme = "system",
                 Language = "pt-BR",
                 Notifications = "{\"push\":true,\"email\":true,\"streaks\":true}",
@@ -168,7 +163,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             var userLevel = new UserLevel
             {
                 Id = Guid.NewGuid(),
-                UserId = user.Id,
+                UserId = userId,
                 Level = 1,
                 CurrentXp = 0,
                 NextLevelXp = 100,
@@ -187,14 +182,14 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             await _context.SaveChangesAsync(cancellationToken);
 
             // Token
-            var token = _jwtGenerator.GenerateToken(user.Id, user.Email, "user");
+            var token = _jwtGenerator.GenerateToken(userId, user.Email, "user");
             var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
             return new AuthResponseDto
             {
                 Success = true,
                 Message = "Usuário registrado com sucesso!",
-                UserId = user.Id,
+                UserId = userId,
                 Email = user.Email,
                 FullName = userProfile.FullName,
                 Token = token,

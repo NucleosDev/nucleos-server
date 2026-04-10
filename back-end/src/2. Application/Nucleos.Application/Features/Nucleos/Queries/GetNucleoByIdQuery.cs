@@ -1,20 +1,9 @@
 using MediatR;
-using Nucleos.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Nucleos.Domain.Entities;
 using Nucleos.Application.Common.Exceptions;
-using Nucleos.Domain.Entities;
 using Nucleos.Application.Common.Interfaces;
-using Nucleos.Domain.Entities;
-using Nucleos.Domain.Entities;
-using Nucleos.Domain.Entities;
-using System.Threading;
-using Nucleos.Domain.Entities;
-using System.Threading.Tasks;
-using Nucleos.Domain.Entities;
-using AutoMapper;
-using Nucleos.Domain.Entities;
 using Nucleos.Application.Features.Nucleos.DTOs;
+using Nucleos.Application.Features.Blocos.DTOs;
 using Nucleos.Domain.Entities;
 
 namespace Nucleos.Application.Features.Nucleos.Queries;
@@ -28,35 +17,47 @@ public class GetNucleoByIdQueryHandler : IRequestHandler<GetNucleoByIdQuery, Nuc
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUser;
-    private readonly IMapper _mapper;
 
-    public GetNucleoByIdQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser, IMapper mapper)
+    public GetNucleoByIdQueryHandler(IApplicationDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
-        _mapper = mapper;
     }
 
     public async Task<NucleoDetailDto> Handle(GetNucleoByIdQuery request, CancellationToken cancellationToken)
     {
         var nucleo = await _context.Nucleos
-            .Include(n => n.Blocos.Where(b => b.DeletedAt == null))
-                .ThenInclude(b => b.Listas.Where(l => l.DeletedAt == null))
-                .ThenInclude(l => l.Itens.Where(i => i.DeletedAt == null))
-            .Include(n => n.Blocos.Where(b => b.DeletedAt == null))
-                .ThenInclude(b => b.Tarefas.Where(t => t.DeletedAt == null))
-            .Include(n => n.Blocos.Where(b => b.DeletedAt == null))
-                .ThenInclude(b => b.Habitos)
-            .Include(n => n.Blocos.Where(b => b.DeletedAt == null))
-                .ThenInclude(b => b.Calculo)
-            .Include(n => n.Blocos.Where(b => b.DeletedAt == null))
-                .ThenInclude(b => b.Colecoes)
-                .ThenInclude(c => c.Campos)
             .FirstOrDefaultAsync(n => n.Id == request.Id && n.UserId == _currentUser.UserId, cancellationToken);
 
         if (nucleo == null)
             throw new NotFoundException(nameof(Nucleo), request.Id);
 
-        return _mapper.Map<NucleoDetailDto>(nucleo);
+        var blocos = await _context.Blocos
+            .Where(b => b.NucleoId == request.Id && b.DeletedAt == null)
+            .OrderBy(b => b.Posicao)
+            .Select(b => new BlocoDto
+            {
+                Id = b.Id,
+                NucleoId = b.NucleoId,
+                Tipo = b.Tipo,
+                Titulo = b.Titulo ?? string.Empty,
+                Posicao = b.Posicao,
+                Configuracoes = b.Configuracoes != null ? b.Configuracoes.ToString() : null,
+                CreatedAt = b.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        return new NucleoDetailDto
+        {
+            Id = nucleo.Id,
+            Nome = nucleo.Nome,
+            Descricao = nucleo.Descricao,
+            Tipo = nucleo.Tipo,
+            CorDestaque = nucleo.CorDestaque,
+            ImagemCapa = nucleo.ImagemCapa,
+            CreatedAt = nucleo.CreatedAt,
+            UpdatedAt = nucleo.UpdatedAt,
+            Blocos = blocos
+        };
     }
 }

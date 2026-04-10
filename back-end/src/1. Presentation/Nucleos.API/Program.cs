@@ -11,6 +11,7 @@ using Nucleos.Infrastructure;
 using Nucleos.Infrastructure.Identity;
 using Nucleos.Infrastructure.Persistence.Context;
 using System.Security.Claims;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,7 +45,21 @@ Console.WriteLine($"JWT_KEY (API): {jwtKey}");
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-builder.Services.AddControllers();
+// 🔥 CONFIGURAÇÃO DE JSON (CASE-INSENSITIVE)
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Aceita tanto PascalCase quanto camelCase nas requisições
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        
+        // Respostas em camelCase (padrão JavaScript)
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        
+        // Configurações adicionais
+        options.JsonSerializerOptions.WriteIndented = true;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+    });
+
 builder.Services.AddEndpointsApiExplorer();
 
 // 🔥 SWAGGER + JWT
@@ -83,7 +98,8 @@ builder.Services.AddCors(options =>
                 "https://nucleos-ui.vercel.app"
             )
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -156,6 +172,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// 🔥 AUTO MAPPER
+builder.Services.AddAutoMapper(typeof(Nucleos.Application.Common.Mappings.MappingProfile));
 builder.Services.AddAuthorization();
 
 var app = builder.Build();

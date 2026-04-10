@@ -30,8 +30,8 @@ public class UpdateBlocoCommandHandler : IRequestHandler<UpdateBlocoCommand, Blo
         if (request.Tipo != null) bloco.Tipo = request.Tipo;
         if (request.Titulo != null) bloco.Titulo = request.Titulo;
         if (request.Posicao.HasValue) bloco.Posicao = request.Posicao.Value;
-        if (request.Configuracoes != null) bloco.Configuracoes = request.Configuracoes;
-        bloco.UpdatedAt = DateTime.UtcNow;
+        if (request.Configuracoes != null) 
+            bloco.Configuracoes = request.Configuracoes; // ✅ String
 
         await _context.SaveChangesAsync(ct);
 

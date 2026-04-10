@@ -43,7 +43,7 @@ public class CreateBlocoCommandHandler : IRequestHandler<CreateBlocoCommand, Blo
             Tipo = request.Tipo,
             Titulo = request.Titulo,
             Posicao = request.Posicao,
-            Configuracoes = JsonSerializer.Serialize(new Dictionary<string, object>()), // serializa para string
+            Configuracoes = "{}",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };

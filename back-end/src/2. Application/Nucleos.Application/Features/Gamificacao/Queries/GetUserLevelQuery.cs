@@ -25,12 +25,27 @@ public class GetUserLevelQueryHandler : IRequestHandler<GetUserLevelQuery, Level
     public async Task<LevelDto> Handle(GetUserLevelQuery request, CancellationToken ct)
     {
         // Verificar permissão: o usuário pode ver apenas seu próprio nível ou de outros?
-        // Se for administrador, pode ver qualquer um; caso contrário, só o próprio.
-        if (request.UserId != _currentUserService.UserId)
+        if (!_currentUserService.HasPermission("ViewUserLevel") && 
+            request.UserId != _currentUserService.UserId)
+        {
             throw new ForbiddenException();
-
-        var level = await _context.UserLevels.FirstOrDefaultAsync(l => l.UserId == request.UserId, ct)
-                    ?? throw new NotFoundException("UserLevel", request.UserId);
+        }
+        
+        // Buscar nível do usuário
+        var level = await _context.UserLevels.FirstOrDefaultAsync(l => l.UserId == request.UserId, ct);
+        
+        // Se não existir nível para o usuário, retorna um padrão (não lança exceção)
+        if (level == null)
+        {
+            return new LevelDto
+            {
+                UserId = request.UserId,
+                Level = 1,
+                CurrentXp = 0,
+                NextLevelXp = 100,
+                TotalXpEarned = 0
+            };
+        }
 
         return new LevelDto
         {
